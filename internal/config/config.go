@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
 )
 
 type Config struct {	
@@ -11,8 +12,32 @@ type Config struct {
 	CurrentUserName string `json:"current_user_name"`
 }
 
+func getConfigPath() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, ".gatorconfig.json"), nil
+}
+
 func Read() (*Config, error) {
-	configPath := ".gatorconfig.json"
+	configPath, err := getConfigPath()
+	if err != nil {
+		return nil, err
+	}
+
+	// If file doesn't exist, create a default config
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		defaultConfig := &Config{
+			DBURL: "postgres://example",
+			Port:  0,
+		}
+		if err := defaultConfig.save(); err != nil {
+			return nil, err
+		}
+		return defaultConfig, nil
+	}
+
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		return nil, err
@@ -26,14 +51,21 @@ func Read() (*Config, error) {
 	return &config, nil
 }
 
+func (c *Config) save() error {
+	configPath, err := getConfigPath()
+	if err != nil {
+		return err
+	}
 
-func (c *Config) SetUser(username string) error {
-	c.CurrentUserName = username
-	
 	data, err := json.MarshalIndent(c, "", "    ")
 	if err != nil {
 		return err
 	}
 
-	return os.WriteFile(".gatorconfig.json", data, 0644)
+	return os.WriteFile(configPath, data, 0644)
+}
+
+func (c *Config) SetUser(username string) error {
+	c.CurrentUserName = username
+	return c.save()
 }
