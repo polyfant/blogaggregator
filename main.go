@@ -45,6 +45,7 @@ func main() {
 	// Register command handlers
 	commands.Register("login", cli.HandleLogin)
 	commands.Register("register", cli.HandleRegister)
+	commands.Register("reset", cli.HandleReset)
 
 	// Create command from arguments
 	cmd := cli.Command{

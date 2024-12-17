@@ -77,3 +77,13 @@ func HandleRegister(s *State, cmd Command) error {
 	fmt.Printf("User details: %+v\n", user)
 	return nil
 }
+
+func HandleReset(s *State, cmd Command) error {
+	err := s.DB.DeleteAllUsers(context.Background())
+	if err != nil {
+		fmt.Println("Failed to reset users:", err)
+		return err
+	}
+	fmt.Println("Successfully deleted all users")
+	return nil
+}
