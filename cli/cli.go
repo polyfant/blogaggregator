@@ -1,63 +1,79 @@
 package cli
 
 import (
-	"fmt"
+	"context"
 	"errors"
+	"fmt"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/polyfant/gator/internal/config"
+	"github.com/polyfant/gator/internal/database"
 )
 
-
+// State holds the application state
 type State struct {
 	Config *config.Config
+	DB     *database.Queries
 }
 
-
+// Command represents a CLI command with its arguments
 type Command struct {
 	Name string
 	Args []string
 }
 
-
-type HandlerFunc func(s *State, cmd Command) error
-
-
-type Commands struct {
-	handlers map[string]func(*State, Command) error
-}
-
-
-func NewCommands() *Commands {
-	return &Commands{
-		handlers: make(map[string]func(*State, Command) error),
-	}
-}
-
-
-func (c *Commands) Register(name string, f func(*State, Command) error) {
-	c.handlers[name] = f
-}
-
-
-func (c *Commands) Run(s *State, cmd Command) error {
-	handler, exists := c.handlers[cmd.Name]
-	if !exists {
-		return fmt.Errorf("unknown command: %s", cmd.Name)
-	}
-	return handler(s, cmd)
-}
-
-
 func HandleLogin(s *State, cmd Command) error {
-	if len(cmd.Args) != 1 {
-		return errors.New("login command requires exactly one argument: username")
+	if len(cmd.Args) < 1 {
+		return errors.New("usage: login <username>")
 	}
-
 	username := cmd.Args[0]
-	if err := s.Config.SetUser(username); err != nil {
-		return fmt.Errorf("failed to set user: %v", err)
+
+	// Check if user exists in database
+	user, err := s.DB.GetUser(context.Background(), username)
+	if err != nil {
+		return fmt.Errorf("user %s does not exist", username)
 	}
 
-	fmt.Printf("User set to: %s\n", username)
+	if err := s.Config.SetUser(username); err != nil {
+		return fmt.Errorf("failed to update config: %v", err)
+	}
+
+	fmt.Printf("Logged in as %s\n", username)
+	fmt.Printf("User details: %+v\n", user)
+	return nil
+}
+
+func HandleRegister(s *State, cmd Command) error {
+	if len(cmd.Args) < 1 {
+		return errors.New("usage: register <username>")
+	}
+	username := cmd.Args[0]
+
+	// Check if user already exists
+	_, err := s.DB.GetUser(context.Background(), username)
+	if err == nil {
+		return fmt.Errorf("user %s already exists", username)
+	}
+
+	// Create new user
+	now := time.Now().UTC()
+	user, err := s.DB.CreateUser(context.Background(), database.CreateUserParams{
+		ID:        uuid.New(),
+		CreatedAt: now,
+		UpdatedAt: now,
+		Name:      username,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create user: %v", err)
+	}
+
+	// Update config
+	if err := s.Config.SetUser(username); err != nil {
+		return fmt.Errorf("failed to update config: %v", err)
+	}
+
+	fmt.Printf("Created user %s\n", username)
+	fmt.Printf("User details: %+v\n", user)
 	return nil
 }

@@ -1,10 +1,13 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 
+	_ "github.com/lib/pq"
 	"github.com/polyfant/gator/internal/config"
+	"github.com/polyfant/gator/internal/database"
 	"github.com/polyfant/gator/cli"
 )
 
@@ -22,8 +25,17 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Open database connection
+	db, err := sql.Open("postgres", cfg.DBURL)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error connecting to database: %v\n", err)
+		os.Exit(1)
+	}
+	defer db.Close()
+
 	// Initialize application state
 	state := &cli.State{
+		DB:     database.New(db),
 		Config: cfg,
 	}
 
@@ -32,6 +44,7 @@ func main() {
 	
 	// Register command handlers
 	commands.Register("login", cli.HandleLogin)
+	commands.Register("register", cli.HandleRegister)
 
 	// Create command from arguments
 	cmd := cli.Command{
