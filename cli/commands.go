@@ -1,7 +1,9 @@
 package cli
 
 import (
+	"context"
 	"fmt"
+	"github.com/polyfant/gator/internal/rss"
 )
 
 type CommandHandler func(*State, Command) error
@@ -26,4 +28,30 @@ func (c *Commands) Run(state *State, cmd Command) error {
 		return fmt.Errorf("unknown command: %s", cmd.Name)
 	}
 	return handler(state, cmd)
+}
+
+func HandleUsers(s *State, cmd Command) error {
+	users, err := s.DB.GetUsers(context.Background())
+	if err != nil {
+		return fmt.Errorf("error getting users: %w", err)
+	}
+
+	for _, user := range users {
+		if user.Name == s.Config.CurrentUserName {
+			fmt.Printf("* %s (current)\n", user.Name)
+		} else {
+			fmt.Printf("* %s\n", user.Name)
+		}
+	}
+	return nil
+}
+
+func HandleAgg(s *State, cmd Command) error {
+	feed, err := rss.FetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
+	if err != nil {
+		return fmt.Errorf("error fetching feed: %w", err)
+	}
+
+	fmt.Printf("%+v\n", feed)
+	return nil
 }
