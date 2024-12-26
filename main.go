@@ -48,6 +48,7 @@ func main() {
 	commands.Register("reset", cli.HandleReset)
 	commands.Register("users", cli.HandleUsers)
 	commands.Register("agg", cli.HandleAgg)
+	commands.Register("addfeed", cli.HandleAddFeed)
 
 	// Create command from arguments
 	cmd := cli.Command{
