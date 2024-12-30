@@ -33,6 +33,13 @@ func main() {
 	}
 	defer db.Close()
 
+	// Test the connection
+	err = db.Ping()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error pinging database: %v\n", err)
+		os.Exit(1)
+	}
+
 	// Initialize application state
 	state := &cli.State{
 		DB:     database.New(db),

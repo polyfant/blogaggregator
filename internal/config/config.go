@@ -29,7 +29,7 @@ func Read() (*Config, error) {
 	// If file doesn't exist, create a default config
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		defaultConfig := &Config{
-			DBURL: "postgres://postgres:postgres@localhost:5432/blog",
+			DBURL: "postgresql://postgres:postgres@localhost:5432/blog?sslmode=disable",
 			Port:  0,
 		}
 		if err := defaultConfig.save(); err != nil {
