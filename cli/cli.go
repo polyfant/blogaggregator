@@ -87,3 +87,16 @@ func HandleReset(s *State, cmd Command) error {
 	fmt.Println("Successfully deleted all users")
 	return nil
 }
+
+func GetAuthenticatedUser(db *database.Queries) (database.User, error) {
+	cfg, err := config.Read()
+	if err != nil {
+		return database.User{}, fmt.Errorf("error reading config: %v", err)
+	}
+
+	if cfg.CurrentUserName == "" {
+		return database.User{}, fmt.Errorf("no user logged in")
+	}
+
+	return db.GetUser(context.Background(), cfg.CurrentUserName)
+}

@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+
 	"github.com/polyfant/gator/internal/database"
 )
 
@@ -14,28 +15,25 @@ func HandleAddFeed(state *State, cmd Command) error {
 	name := cmd.Args[0]
 	url := cmd.Args[1]
 
-	// Get the current user
-	user, err := state.DB.GetUser(context.Background(), state.Config.CurrentUserName)
+	user, err := GetAuthenticatedUser(state.DB)
 	if err != nil {
-		return fmt.Errorf("error getting user: %v", err)
+		return err
 	}
 
-	// Create the feed
 	feed, err := state.DB.CreateFeed(context.Background(), database.CreateFeedParams{
 		Name:   name,
 		Url:    url,
 		UserID: user.ID,
 	})
 	if err != nil {
-		return fmt.Errorf("error creating feed: %v", err)
+		return err
 	}
 
-	// Print the feed details
 	fmt.Printf("Feed created successfully:\n")
-	fmt.Printf("ID: %s\n", feed.ID)
-	fmt.Printf("Name: %s\n", feed.Name)
-	fmt.Printf("URL: %s\n", feed.Url)
-	fmt.Printf("Created at: %v\n", feed.CreatedAt)
+	fmt.Printf("Name: %v\n", feed.Name)
+	fmt.Printf("URL: %v\n", feed.Url)
+	fmt.Printf("User ID: %v\n", feed.UserID)
+	fmt.Printf("Created At: %v\n", feed.CreatedAt)
 
 	return nil
 }
