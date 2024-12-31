@@ -55,7 +55,11 @@ func main() {
 	commands.Register("reset", cli.HandleReset)
 	commands.Register("users", cli.HandleUsers)
 	commands.Register("agg", cli.HandleAgg)
-	commands.Register("addfeed", cli.HandleAddFeed)
+	commands.Register("addfeed", cli.MiddlewareLoggedIn(cli.HandleAddFeed))
+	commands.Register("feeds", cli.HandleListFeeds)
+	commands.Register("follow", cli.MiddlewareLoggedIn(cli.HandleFollow))
+	commands.Register("following", cli.MiddlewareLoggedIn(cli.HandleFollowing))
+	commands.Register("unfollow", cli.MiddlewareLoggedIn(cli.HandleUnfollow))
 
 	// Create command from arguments
 	cmd := cli.Command{
