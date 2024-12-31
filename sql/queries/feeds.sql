@@ -46,3 +46,17 @@ WHERE feed_follows.user_id = $1
 AND feed_follows.feed_id = (
     SELECT id FROM feeds WHERE url = $2
 );
+
+-- name: GetNextFeedToFetch :one
+SELECT *
+FROM feeds
+WHERE last_fetched_at IS NULL
+   OR last_fetched_at < NOW() - ($1 * interval '1 minute')
+ORDER BY last_fetched_at ASC NULLS FIRST
+LIMIT 1;
+
+-- name: MarkFeedFetched :one
+UPDATE feeds
+SET last_fetched_at = NOW()
+WHERE id = $1
+RETURNING *;
