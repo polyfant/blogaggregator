@@ -6,9 +6,9 @@ import (
 	"os"
 
 	_ "github.com/lib/pq"
+	"github.com/polyfant/gator/cli"
 	"github.com/polyfant/gator/internal/config"
 	"github.com/polyfant/gator/internal/database"
-	"github.com/polyfant/gator/cli"
 )
 
 func main() {
@@ -60,6 +60,7 @@ func main() {
 	commands.Register("follow", cli.MiddlewareLoggedIn(cli.HandleFollow))
 	commands.Register("following", cli.MiddlewareLoggedIn(cli.HandleFollowing))
 	commands.Register("unfollow", cli.MiddlewareLoggedIn(cli.HandleUnfollow))
+	commands.Register("browse", cli.MiddlewareLoggedIn(cli.HandleBrowse))
 
 	// Create command from arguments
 	cmd := cli.Command{

@@ -2,9 +2,12 @@ package cli
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
-	"time"
 	"log"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/polyfant/gator/internal/database"
 	"github.com/polyfant/gator/internal/rss"
@@ -99,8 +102,76 @@ func scrapeFeed(db *database.Queries, feed database.Feed) {
 		log.Printf("Couldn't collect feed %s: %v", feed.Name, err)
 		return
 	}
+
 	for _, item := range feedData.Channel.Items {
-		fmt.Printf("Found post: %s\n", item.Title)
+		publishedAt, err := parsePublishedAt(item.PubDate)
+		if err != nil {
+			log.Printf("Couldn't parse published date %s: %v", item.PubDate, err)
+			continue
+		}
+
+		_, err = db.CreatePost(context.Background(), database.CreatePostParams{
+			Title:       item.Title,
+			Url:         item.Link,
+			Description: sql.NullString{String: item.Description, Valid: item.Description != ""},
+			PublishedAt: publishedAt,
+			FeedID:      feed.ID,
+		})
+		if err != nil {
+			// Ignore unique constraint violations
+			if strings.Contains(err.Error(), "unique constraint") {
+				continue
+			}
+			log.Printf("Couldn't create post %s: %v", item.Title, err)
+			continue
+		}
 	}
 	log.Printf("Feed %s collected, %v posts found", feed.Name, len(feedData.Channel.Items))
+}
+
+func parsePublishedAt(dateStr string) (time.Time, error) {
+	layouts := []string{
+		time.RFC1123Z,
+		time.RFC1123,
+		time.RFC822,
+		time.RFC822Z,
+		"2006-01-02T15:04:05Z",
+		"2006-01-02T15:04:05-07:00",
+		"Mon, 02 Jan 2006 15:04:05 -0700",
+	}
+
+	for _, layout := range layouts {
+		if t, err := time.Parse(layout, dateStr); err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("could not parse date: %s", dateStr)
+}
+
+func HandleBrowse(s *State, cmd Command, user database.User) error {
+	var limit int32 = 2
+	if len(cmd.Args) > 0 {
+		parsedLimit, err := strconv.ParseInt(cmd.Args[0], 10, 32)
+		if err != nil {
+			return fmt.Errorf("invalid limit: %w", err)
+		}
+		limit = int32(parsedLimit)
+	}
+
+	posts, err := s.DB.GetPostsForUser(context.Background(), database.GetPostsForUserParams{
+		UserID: user.ID,
+		Limit:  limit,
+	})
+	if err != nil {
+		return fmt.Errorf("error getting posts: %w", err)
+	}
+
+	for _, post := range posts {
+		fmt.Printf("Title: %s\nURL: %s\nPublished: %v\n\n", 
+			post.Title, 
+			post.Url,
+			post.PublishedAt.Format(time.RFC822),
+		)
+	}
+	return nil
 }
