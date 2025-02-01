@@ -1,3 +1,1 @@
-gator
-
-a blogaggregator in cli
+a blog aggregator built in go, CLI.
